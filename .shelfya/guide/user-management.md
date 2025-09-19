@@ -1,42 +1,50 @@
-# User Management Module
+# User Management
 
 ## Overview
-The User Management module centralizes user profile data and shares it across the application. It ensures that the authenticated user's profile information is always up-to-date by subscribing to real-time updates from the Firestore database. The module exposes a context that allows consumer components to access user-specific information without redundant requests or manual state management.
+The User Management module provides a unified way to access and monitor user profile data throughout the application. It supplies up-to-date user information for any screen or component, ensuring that user-related features reflect the latest data from Firestore. This module is foundational for enabling personalized user experiences and secure access control.
 
 ## Key Features
-- **User Profile Context**: Provides a global context containing the currently authenticated user's profile details, ensuring consistent and easy access throughout the app.
-- **Real-Time Sync**: Automatically syncs user profile data with Firestore, updating the context whenever the database changes.
-- **Auth Integration**: Seamlessly integrates with the authentication system to fetch data for the correct user, handling profile updates when authentication state changes.
+- **Live Profile Syncing**: Automatically listens for real-time changes to the authenticated user's profile in Firestore and updates the app state.
+- **Context-Based Access**: Exposes user profile data via React Context, making it easily consumable by any component in the component tree.
+- **Seamless Integration with Auth**: Links profile data to the current authenticated user by leveraging the authentication context for user identification.
 
 ## System Errors
-- **User Document Not Found**: If the user's profile document does not exist in the Firestore database, an error message ("No such user!") is logged to the console.  
-  _Resolution_: Ensure users are properly registered, and their profile documents exist in the `users` collection.
-- **Invalid Firebase Configuration**: If `FB_DB` is misconfigured or unavailable, profile fetching will fail silently.  
-  _Resolution_: Validate Firebase initialization and verify connectivity.
+- **Missing User Document**: Profile listener may encounter missing user document in Firestore.
+  - *Resolution*: Ensure a user profile is created in Firestore for every authenticated user.
+- **Authentication Context Not Provided**: If used outside an AuthProvider, profile data will not be available.
+  - *Resolution*: Wrap the component tree with both AuthProvider and UserProvider.
+- **Firestore Permission Errors**: Insufficient permissions to read user profile data in Firestore.
+  - *Resolution*: Configure Firestore security rules to allow read access for authenticated users on their profile document.
 
 ## Usage Examples
 Practical code examples showing how to use the module:
 
 ```javascript
-// In your App.js or main entry point
+// Wrap your App component with both AuthProvider and UserProvider
+import { AuthProvider } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
 
 export default function App() {
   return (
-    <UserProvider>
-      {/* other providers/components */}
-      <ProfileScreen />
-    </UserProvider>
+    <AuthProvider>
+      <UserProvider>
+        {/* ...rest of your application */}
+      </UserProvider>
+    </AuthProvider>
   );
 }
 
-// Consuming user profile data inside a component
+// Access user profile data in any child component
 import React from 'react';
 import { useUser } from '../context/UserContext';
 
 function Greeting() {
   const { profile } = useUser();
-  return <Text>Hello, {profile?.displayName || "User"}!</Text>;
+  return (
+    <Text>
+      Hello, {profile.displayName || 'Guest'}!
+    </Text>
+  );
 }
 ```
 
@@ -44,8 +52,18 @@ function Greeting() {
 
 ```mermaid
 flowchart LR
-  dependencies["Dependencies (Firebase DB, AuthContext)"] --> thisModule["User Management Module (UserContext)"] --> usedBy["Used By (App, ProfileScreen, any consumer component)"]
-  dependencies --> details["[Details] AuthContext provides currentUser; Firebase DB stores user profiles"]
-  thisModule --> process["[Process] Provides real-time user profile context"]
-  usedBy --> consumers["[Consumers] ProfileScreen, custom screens/components"]
+  dependencies["Dependencies"]
+  dependencies --> firebase["Firebase (Firestore)"]
+  dependencies --> authContext["AuthContext"]
+  dependencies --> reactContext["React Context API"]
+  
+  thisModule["UserContext"]
+  dependencies --> thisModule
+  
+  thisModule --> process["Real-time profile update via Firestore onSnapshot"]
+  thisModule --> profileData["Exposes 'profile' in Context"]
+  
+  usedBy["Used By"]
+  thisModule --> usedBy
+  usedBy --> consumers["Screens & Components (e.g., ProfileScreen, Greeting)"]
 ```

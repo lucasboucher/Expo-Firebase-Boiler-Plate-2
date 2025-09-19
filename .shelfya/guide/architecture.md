@@ -1,70 +1,69 @@
-# Navigation and Context Architecture
+# App Architecture
 
 ## Overview
-This module provides the architectural foundation for user authentication, user state management, and navigation flow in the app. It controls how users move through authentication screens and the main app, while maintaining the current authentication status and user profile data. By combining React Navigation patterns with Firebase-based authentication and user context, it enables seamless transitions and consistent user state across the application.
+This module defines the core architectural pattern for the Expo-Firebase boilerplate project. It orchestrates authentication and user state management across the application using React Context providers, and conditionally renders navigation flows for authenticated and unauthenticated users. The architecture ensures seamless user onboarding by integrating Firebase Auth, real-time user profile updates via Firestore, and dynamic navigation via React Navigation stacks/tabs.
 
 ## Key Features
-
-- **Authentication State Management**: 
-  Manages sign-in, sign-up, sign-out, and password reset workflows using Firebase Auth, exposing the current user and loading state throughout the app.
-
-- **User Profile Context**: 
-  Listens for changes to the authenticated user's profile in Firestore, making profile data available to the application in real-time.
-
-- **Authentication Stack Navigation**: 
-  Provides a stack navigator for guest users, showing onboarding, sign-in, and sign-up screens based on authentication state.
-
-- **Main App Tab Navigation**: 
-  Offers a bottom tab navigator for signed-in users to access primary app sections: Home, Browse, and Profile screens.
-
-- **Conditional Navigation Flow**: 
-  Automatically determines which navigation stack to display based on whether a user is authenticated, ensuring correct user experience at all times.
+- **Authentication State Management**: Maintains and exposes authentication state (sign-in, sign-up, sign-out, password reset) across the application via `AuthContext`.
+- **User Profile Synchronization**: Loads and updates user profile data in real-time from Firestore using `UserContext`, tied to the authenticated user.
+- **Dynamic Navigation Routing**: Switches between authenticated (`MainStack`) and unauthenticated (`AuthStack`) navigation flows based on current user status.
+- **Stack and Tab Navigation**: Separates concerns between authentication (using stack navigation) and main application areas (using a bottom tab navigator).
+- **Provider Composition**: Wraps providers to ensure all screens, regardless of auth status, have access to user and authentication contexts.
 
 ## System Errors
-
-- **Invalid Credentials / Auth Errors**: 
-  Occur during sign-up/sign-in (e.g., wrong password, email in use). Resolution: Handle with user feedback, validate credentials before submission.
-
-- **Network / Firebase Service Issues**: 
-  Errors in Firebase auth calls or Firestore access can interrupt sign-in or profile loading. Resolution: Display a generic error message and allow retry.
-
-- **User Profile Not Found**: 
-  If the Firestore user document does not exist for an authenticated user. Resolution: Log warning, optionally prompt onboarding or contact support.
-
-- **Loading States**: 
-  The app may be stuck in a loading state if network is slow or Firebase initialization takes time. Resolution: Ensure loading indicators are shown and add timeout or graceful degradation.
+- **Authentication Errors**: Errors from Firebase Auth such as invalid credentials, user not found, or email already in use.  
+  *Resolution*: Catch and display error messages in the UI; ensure input validation before making requests.
+- **Profile Data Not Found**: Attempting to load a user profile document that does not exist in Firestore.  
+  *Resolution*: Implement user creation logic upon registration to ensure profiles exist; check for document existence in the UI.
+- **Network/Connectivity Issues**: Failures in connecting to Firebase services (Auth or Firestore).  
+  *Resolution*: Inform the user, possibly with a retry option; ensure graceful error handling for offline scenarios.
+- **Provider/Context Misuse**: Attempting to use `useAuth` or `useUser` outside their respective providers.  
+  *Resolution*: Only use these hooks in components below the corresponding Provider in the tree.
 
 ## Usage Examples
 
 ```jsx
-// In your App.js (already handled by boilerplate)
-import React from 'react';
-import App from './App';
-
-export default function EntryPoint() {
-  return <App />;
-}
-
-// Accessing authentication context in a component
+// Accessing authentication state and actions
 import { useAuth } from './context/AuthContext';
-function SomeComponent() {
-  const { currentUser, signIn, signOut } = useAuth();
 
-  // Trigger sign-in
-  const handleLogin = () => signIn('email@example.com', 'password');
+function MyComponent() {
+  const { currentUser, signIn, signUp, logOut } = useAuth();
+
+  // Example: sign in user
+  const handleLogin = () => {
+    signIn('user@example.com', 'password123').catch(e => alert(e.message));
+  };
 
   return (
     <View>
-      {currentUser ? <Button title="Sign Out" onPress={signOut} /> : <Button title="Sign In" onPress={handleLogin} />}
+      {currentUser ? (
+        <Button title="Sign Out" onPress={logOut} />
+      ) : (
+        <Button title="Sign In" onPress={handleLogin} />
+      )}
     </View>
   );
 }
 
-// Accessing user profile context
+// Accessing live user profile data
 import { useUser } from './context/UserContext';
-function ProfileSummary() {
+
+function ProfileScreen() {
   const { profile } = useUser();
   return <Text>{profile.displayName}</Text>;
+}
+
+// Application composition (in App.js)
+export default function App() {
+  return (
+    <AuthProvider>
+      <UserProvider>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </UserProvider>
+    </AuthProvider>
+  );
 }
 ```
 
@@ -72,27 +71,23 @@ function ProfileSummary() {
 
 ```mermaid
 flowchart LR
-  FB_Auth["Firebase Auth"]
-  FB_DB["Firestore DB"]
-  NavigationContainer["React Navigation Container"]
+  subgraph External
+    FirebaseAuth["Firebase Auth"]
+    Firestore["Firestore Database"]
+  end
+  External -.-> dependencies["Dependencies"]
   
-  FB_Auth --> AuthContext["AuthContext Provider (useAuth)"]
-  AuthContext --> AppNavigator["AppNavigator (controls navigation flow)"]
-  AuthContext --> UserContext["UserContext Provider (useUser)"]
-  FB_DB --> UserContext
-  NavigationContainer --> AppNavigator
-  AppNavigator -->|Authenticated| MainStack["Main Tab Navigator (Home/Browse/Profile)"]
-  AppNavigator -->|Guest| AuthStack["Auth Stack (SignIn/SignUp/Onboarding)"]
-  MainStack --> HomeScreen["Home/Browse/Profile Screens"]
-  AuthStack --> AuthScreens["SignIn/SignUp/FirstScreen"]
-  
-  MainStack --> consumers["App Features"]
-  AuthStack --> consumers
-```
+  dependencies --> AuthContext["AuthContext (Provider & Hook)"]
+  AuthContext --> UserContext["UserContext (Provider & Hook)"]
+  AuthContext -.-> AuthStack["AuthStack Navigation"]
+  AuthContext -.-> MainStack["MainStack Navigation"]
 
-**Legend:**
-- **Firebase Auth/Firestore**: Provides authentication and user data services.
-- **Context Providers**: Make authentication state and user profile available to all components.
-- **Navigation Container/AppNavigator**: Orchestrates the screen flow based on user context.
-- **MainStack/AuthStack**: Present appropriate screens depending on the user's authentication status.
-- **Consumers**: Any UI component or feature needing user state or navigation capabilities.
+  UserContext --> MainStack
+  AuthStack --> process["Screen Components (SignIn, SignUp, etc)"]
+  MainStack --> process2["Screen Components (Home, Browse, Profile, etc)"]
+
+  AuthContext -.-> error1["[Error: Auth failures]"]
+  UserContext -.-> error2["[Error: Profile missing]"]
+
+  process & process2 --> consumers["[App Screens/Components]"]
+```

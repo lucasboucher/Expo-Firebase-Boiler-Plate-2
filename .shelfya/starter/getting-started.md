@@ -1,42 +1,87 @@
 # Getting Started
 
 ## Overview
-This starter module provides a foundation for developing React Native apps using Expo with integrated Firebase authentication and navigation. It establishes the main application structure, manages authentication state, and provides a ready environment for building scalable, feature-rich mobile apps.
+
+This starter module provides the foundational setup for a cross-platform React Native application using Expo, Firebase, and robust navigation. It handles initial configuration, environment-based security, authentication context, and seamless integration of storage, database, and navigation features. The starter is designed to offer a scalable structure for modern mobile apps, ensuring quick onboarding and secure connectivity to Firebase services.
 
 ## Key Features
-- **Dual Stack Navigation**: Automatically switches between authentication flow and main app flow based on user login state, leveraging React Navigation's stack navigator.
-- **Firebase Authentication Integration**: Centralized authentication state management using context providers to track the current user and loading state.
-- **Global State Management**: Provides access to authenticated user data across the application via context providers, enabling seamless data sharing.
-- **Expo Compatibility**: Optimized for Expo, allowing rapid development and easy deployment on Android, iOS, and web platforms.
+
+- **Expo Bootstrapping**: Rapid app development foundation leveraging Expo for cross-platform deployment and native capabilities.
+- **Firebase Integration**: Centralized initialization and export of Firebase Authentication, Firestore, and Storage services, ready for use throughout the app.
+- **.env Configuration**: Secure, environment-based management of sensitive Firebase credentials using `.env` files and the `react-native-dotenv` plugin.
+- **Multiple Context Providers**: Global state management for user data and authentication, offering modular separation of concerns.
+- **Navigation Architecture**: Conditional navigation flow between authentication and main app stacks, powered by React Navigation.
+- **SVG Asset Support**: Native support for using SVG assets in the app via custom Metro bundler configuration.
 
 ## System Errors
-- **Authentication Loading Delay**: If the authentication state takes too long to resolve, users may see a persistent loading spinner.
-  - **Resolution**: Ensure Firebase is correctly configured and that your network connection is stable. Review async loading logic and environment setup.
-- **Navigation Mismatch**: If navigation routes are not properly set in `MainStack` or `AuthStack`, users may experience navigation errors or missing screens.
-  - **Resolution**: Verify that both `MainStack` and `AuthStack` are correctly exported and contain the expected screens.
+
+- **Missing/Invalid Environment Variables**:  
+  Occurs if required variables (e.g., `APIKEY`, `PROJECTID`, etc.) are not set in the `.env` file.
+  - **Resolution**: Verify your `.env` file is complete and follows the `.env.exemple` template; restart your development server after changes.
+
+- **Firebase Initialization Errors**:  
+  Can occur due to a misconfigured or incomplete Firebase config.
+  - **Resolution**: Double-check environment variables and ensure your Firebase project is correctly set up.
+
+- **SVG Asset Import Failures**:  
+  If SVG images aren't loaded or throw errors, Metro bundler may not be correctly configured.
+  - **Resolution**: Ensure `metro.config.js` includes the SVG transformer and that the correct dependencies are installed.
 
 ## Usage Examples
 
 ```javascript
-// Entry point: App.js
+// Using initialized Firebase services anywhere in your app:
+import { FB_AUTH, FB_DB, FB_STORE } from './firebaseconfig';
 
-import React from 'react';
-import App from './App'; // Main app structure provided by the starter
+// Accessing authenticated user or context data
+import { useAuth } from './context/AuthContext';
 
-export default App;
+const { currentUser, loading } = useAuth();
 
-// Typical usage scenario:
-// 1. Wrap your app in AuthProvider and UserProvider (for auth and user state).
-// 2. NavigationContainer manages navigation context.
-// 3. AppNavigator conditionally renders MainStack or AuthStack depending on Firebase authentication state.
+if (currentUser) {
+  // User is authenticated, interact with Firestore:
+  await addDoc(collection(FB_DB, 'users'), { name: currentUser.displayName });
+}
+```
+
+```javascript
+// Adding secure environment variables
+// .env file (do not commit this to version control)
+APIKEY=your-firebase-api-key
+PROJECTID=your-firebase-project-id
+AUTHDOMAIN=your-app.firebaseapp.com
+STORAGEBUCKET=your-app.appspot.com
+MESSAGINGSENDERID=your-sender-id
+APPID=your-app-id
+```
+
+```sh
+# Starting the application
+npm install
+npm run start
+# or, for platform-specific start
+npm run android
+npm run ios
+npm run web
 ```
 
 ## System Integration
 
 ```mermaid
 flowchart LR
-  dependencies["Firebase Auth<br>React Navigation<br>Expo<br>Context Providers"] --> thisModule["App.js (Starter Module)"] --> usedBy["Application Screens"]
-  dependencies --> details["Firebase setup,<br> User Context,<br> Auth Context"]
-  thisModule --> process["Handles:<br>- Auth loading<br>- Stack switching<br>- Context setup"]
-  usedBy --> consumers["MainStack:<br>Main App Flows<br><br>AuthStack:<br>Login/Register"]
+  Firebase["Firebase Services"]
+  EnvVars[".env Variables"]
+  Navigation["React Navigation"]
+  Contexts["Auth/User Context Providers"]
+  SVG["SVG & Asset Support"]
+
+  EnvVars --> firebaseconfig["firebaseconfig.js"]
+  firebaseconfig --> Firebase
+  firebaseconfig --> App["App.js"]
+  Contexts --> App
+  Navigation --> App
+  SVG --> MetroConfig["metro.config.js"]
+  MetroConfig --> App
+  
+  App --> "Your App Components"
 ```

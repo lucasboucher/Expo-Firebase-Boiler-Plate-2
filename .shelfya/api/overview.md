@@ -1,69 +1,67 @@
-# API Overview
+# Screens Module
 
 ## Overview
-This module provides a feature-centric abstraction for integrating Firebase authentication and user profile management into a React Native Expo application. It establishes authentication workflows (sign up, sign in, sign out, password reset) and enables seamless access to Firestore-based user profiles. The system leverages React Contexts for global state management and Firebase client SDKs for cloud service integration.
+The **Screens Module** contains all main user-facing screens and flows for the Expo-Firebase Boilerplate application. This module provides the foundational navigation structure, manages user authentication routes, and surfaces feature screens including Home, Profile, Browse, Sign In, and Sign Up. Its purpose is to organize predictable navigation and user journeys across the app, making the application modular and extensible.
 
 ## Key Features
-- **Firebase Service Initialization**: Secure bootstrapping and configuration of Firebase App, Auth, Firestore, and Storage, streamlined for React Native via persistent storage.
-- **AuthContext**: Exposes high-level authentication APIs (`signUp`, `signIn`, `logOut`, `resetPassword`) and provides real-time authentication state to the application.
-- **UserContext**: Automatically loads and updates the authenticated user's Firestore profile document, making profile data globally available within the app.
+- **Authentication Workflow**: Screens for user sign-in (`SignInScreen`) and sign-up (`SignUpScreen`), including validation and integration with backend authentication. Handles routing between authentication and main app flows.
+- **User Home Screen**: Landing page (`HomeScreen`) after authentication, displaying a personalized welcome message from user profile data and providing a sign-out mechanism.
+- **Profile Management**: Basic user profile viewing (`ProfileScreen`), providing a template for expansion with account or settings features.
+- **Content Browsing**: Dedicated browsing area (`BrowseScreen`) for user interaction beyond the home dashboard.
+- **Onboarding & Navigation**: Entry (`FirstScreen`) for new or logged-out users, with explicit options for registration and sign-in, ensuring clear user journey initiation.
+- **Reusable App Header**: Flexible `Header` component for consistent UI branding and potential navigation controls across screens.
 
 ## System Errors
-- **Authentication Failure**: Occurs when sign-in/sign-up fails (e.g., invalid credentials, network issues).  
-  _Resolution_: Check credentials, ensure device network connectivity, and review Firebase project configuration.
-- **User Profile Not Found**: Triggered when a Firestore user document does not exist for the signed-in user.  
-  _Resolution_: Ensure user profiles are written to Firestore as part of the onboarding flow.
-- **Persistence Issues**: Arises if AsyncStorage fails to operate or initialize with Firebase Auth.  
-  _Resolution_: Confirm `@react-native-async-storage/async-storage` is installed and functioning.
+- **Authentication Errors**: 
+  - **Invalid Credential**: Displays user-friendly error when sign-in credentials are incorrect.  
+    *Resolution*: End-user should check their email or password accuracy.
+  - **Email Already in Use**: Prevents user registration with a previously registered email.
+    *Resolution*: User must use a different email address or attempt password recovery.
+  - **Invalid Email / Weak Password**: Input validation ensures only properly formatted and strong passwords are accepted.
+    *Resolution*: User must correct their input as per displayed messages.
+- **Navigation Errors**:
+  - **Route Reset Failures**: Edge case if navigation stack reset fails during sign-in/out.
+    *Resolution*: Relaunching the application generally resolves these, as stack will re-initialize.
+- **General UI Validation**:
+  - Missing Required Fields (e.g., empty email or password): Screen-level error messages advise users to complete forms.
+    *Resolution*: User must fill in all required fields before submission.
 
 ## Usage Examples
 
-```javascript
-// Wrap your app with AuthProvider and UserProvider in App.js
-import { AuthProvider } from './context/AuthContext';
-import { UserProvider } from './context/UserContext';
-
-export default function App() {
+```jsx
+// Navigating between authentication and main screens based on user state
+function App() {
   return (
     <AuthProvider>
       <UserProvider>
-        {/* ...your app components */}
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
       </UserProvider>
     </AuthProvider>
   );
 }
 
-// Use authentication features in components
-import { useAuth } from './context/AuthContext';
+// In SignUpScreen: Handling user registration and storing profile data
+<TouchableOpacity onPress={SignUpUser} style={styles.button}>
+  <Text>S'inscrire</Text>
+</TouchableOpacity>
 
-function LoginScreen() {
-  const { signIn, resetPassword, loading, currentUser } = useAuth();
+// In SignInScreen: Handling sign-in and navigation on success
+<TouchableOpacity onPress={SignInUser} style={styles.button}>
+  <Text>Se connecter</Text>
+</TouchableOpacity>
 
-  const handleLogin = async () => {
-    try {
-      await signIn(email, password);
-    } catch (e) {
-      // handle error
-    }
-  };
-}
-
-// Access current user's profile anywhere in the app
-import { useUser } from './context/UserContext';
-
-function ProfileScreen() {
-  const { profile } = useUser();
-
-  return <Text>{profile.displayName}</Text>;
-}
+// Navigating to Profile from HomeScreen (example)
+<Button title="Profil" onPress={() => navigation.navigate('Profile')} />
 ```
 
 ## System Integration
 
 ```mermaid
 flowchart LR
-  dependencies["Firebase Cloud Services (Auth, Firestore, Storage), AsyncStorage"] --> thisModule["API Module (AuthContext, UserContext)"] --> usedBy["App Components"]
-  dependencies --> details["[Firebase Configuration (.env), React Native AsyncStorage]"]
-  thisModule --> process["[Authentication Flows, Profile Sync]"] 
-  usedBy --> consumers["[Screens, Hooks, React Components]"]
+  dependencies["AuthContext, UserContext, Firebase Auth/DB, NavigationContainer"] --> thisModule["Screens Module"]
+  thisModule --> process["Navigation logic, user onboarding, main content display"]
+  thisModule --> usedBy["App Shell"]
+  usedBy --> consumers["End-users, feature extensions"]
 ```

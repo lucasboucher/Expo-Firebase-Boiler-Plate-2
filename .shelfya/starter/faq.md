@@ -1,39 +1,51 @@
 # FAQ Module
 
 ## Overview
-The FAQ Module provides a structured way to display frequently asked questions and their answers within the Expo Firebase Boilerplate. It is designed to help users and developers quickly find solutions to common issues, making onboarding and troubleshooting more efficient.
+The FAQ module provides end users with a list of frequently asked questions and their answers, serving as a self-service help and support resource within the application. It helps users quickly resolve common issues or understand how to use key features, reducing the need for direct support requests.
 
 ## Key Features
-- **Question-Answer Display**: Presents common questions and their respective answers in a readable format.
-- **Searchable Content**: (If enabled) Allows users to search through FAQs for specific keywords or topics.
-- **Easy Maintenance**: FAQs can be updated or extended without disrupting other system modules.
+- **Display FAQ List**: Presents a curated list of common questions and their answers in an accessible format for users.
+- **Interactive Categories**: Allows users to browse or filter FAQs by topic or category to quickly find relevant information.
+- **In-App Integration**: Embeds directly within the main application user interface, ensuring a seamless support experience.
+- **Support Contact Guidance**: Directs users to contact support when their issue is not covered in the FAQ.
 
 ## System Errors
-- **FAQ Not Found**: Occurs when a requested FAQ item does not exist.  
-  Resolution: Double-check the FAQ identifier or update the FAQ data source.
-- **Content Load Failure**: Happens if the FAQ data cannot be loaded (e.g., network issues or file corruption).  
-  Resolution: Ensure network connectivity or verify the FAQ content/data file integrity.
+- **Content Not Available**: FAQ data fails to load (e.g., network issues or backend errors).  
+  _Resolution_: Ensure device connectivity and backend availability; provide fallback messaging to inform users.
+- **Outdated Information**: Displayed FAQ entries may not reflect current app features or policies.  
+  _Resolution_: Schedule regular content reviews and updates to ensure accuracy.
 
 ## Usage Examples
-```javascript
-// Example: Import and use the FAQ module in your screen/component
 
-import FAQ from './.shelfya/starter/faq';
+```jsx
+// Example: Rendering the FAQ module within a screen
+import FAQ from './components/FAQ';
 
-// Render the FAQ section in your app
-<FAQ
-  questions={[
-    { question: "How do I set up Firebase?", answer: "Follow the steps in the README." },
-    { question: "Where do I find configuration files?", answer: "Refer to the config folder in the project root." }
-  ]}
-/>
+export default function HelpScreen() {
+  return (
+    <View>
+      <FAQ />
+    </View>
+  );
+}
+
+// Example: Navigating to the FAQ from a Help button
+import { useNavigation } from '@react-navigation/native';
+
+const HelpButton = () => {
+  const navigation = useNavigation();
+  return (
+    <Button title="FAQ" onPress={() => navigation.navigate('FAQScreen')} />
+  );
+};
 ```
 
 ## System Integration
+
 ```mermaid
 flowchart LR
-  dependencies["README Content/Configuration"] --> thisModule["FAQ Module"] --> usedBy["User Interface/Screens"]
-  dependencies --> details["Project Documentation, Config Files"]
-  thisModule --> process["Display, Search, Update FAQ"]
-  usedBy --> consumers["End Users, Developers"]
+  dependencies["FAQ Content Source (local file, API, or CMS)"] --> thisModule["FAQ Module"] --> usedBy["Integrated In App Screens"]
+  dependencies --> details["Published FAQ data"]
+  thisModule --> process["Renders FAQ list, handles navigation/filtering"] 
+  usedBy --> consumers["End Users, Support UI"]
 ```
