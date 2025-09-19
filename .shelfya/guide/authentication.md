@@ -1,90 +1,100 @@
 # Authentication Module
 
 ## Overview
-The Authentication Module provides centralized user authentication for the Expo-Firebase application. It manages user sign-in, sign-up, session state, and logout using Firebase Authentication services. The module ensures secure user access, maintains authentication state throughout the app, and offers easy integration points for UI components to interact with authentication workflows.
+The Authentication module provides user authentication capabilities for the application, supporting account creation (sign up), user login (sign in), logout, password reset, and real-time authentication state management. This module integrates with Firebase Authentication and exposes public APIs to allow other components to check authentication status or trigger authentication actions. It serves as the central place for managing authenticated sessions in the broader application, ensuring secure access control and user identity management.
 
 ## Key Features
-- **Centralized Auth State Management**: Provides global context for the user's authentication status, accessible from any part of the app via React Context API.
-- **User Sign-Up**: Allows users to register with email and password and supports storing additional user profile information in Firestore.
-- **User Sign-In**: Enables users to log in using their email and password, with real-time error feedback for invalid credentials.
-- **Password Reset**: Supports sending password reset emails through Firebase for users who forgot their password.
-- **Logout**: Lets authenticated users safely log out, clearing their session across the app.
-- **Error Handling & Messaging**: Surfaces common Firebase authentication errors to the UI for user-friendly feedback during registration and login.
-- **Loading State Handling**: Exposes a loading state to signal when authentication status is being determined (e.g., on app startup).
+
+- **Authentication Context Provider**: Wraps the application tree to provide authentication state (`currentUser`), status (`loading`), and authentication actions via React Context.
+- **Sign Up**: Registers a new user using their email and password, then persists additional profile data (e.g., first name, last name) to Firestore.
+- **Sign In**: Authenticates an existing user by email and password, updating the application state and UI on success or failure.
+- **Sign Out**: Logs out the current user and resets the authentication state.
+- **Password Reset**: Initiates a password reset process for users who forgot their password.
+- **Auth State Synchronization**: Real-time listener using Firebase (`onAuthStateChanged`) ensures UI and logic remain in sync with the user's authentication state.
+- **Error Feedback and Validation**: Built-in form validation and error handling for common scenarios (e.g., invalid credentials, already-used email).
 
 ## System Errors
-It's important to document common errors and troubleshooting specifics:
-- **auth/email-already-in-use**: Attempting to register with an email that is already associated with an account.  
-  **Resolution**: Prompt the user to use another email or to log in.
-- **auth/invalid-email**: Email format is invalid during sign-up or sign-in.  
-  **Resolution**: Ask the user to input a valid email address.
-- **auth/weak-password**: Password does not meet security requirements during registration.  
-  **Resolution**: Instruct the user to choose a stronger password (at least 6 characters).
-- **auth/invalid-credential**: Email or password is incorrect during sign-in.  
-  **Resolution**: Inform the user to check their credentials.
-- **Network or Firebase errors**: Issues connecting to Firebase or reading/writing profile data.  
-  **Resolution**: Notify the user of connectivity issues and recommend retrying.
+
+- **auth/invalid-credential**: Triggered on login when the email or password is incorrect.  
+  **Resolution**: Show an error message; prompt user to verify credentials.
+
+- **auth/email-already-in-use**: Occurs during sign up if the email is already registered.  
+  **Resolution**: Show a message that the account exists and prompt for login or password reset.
+
+- **auth/invalid-email**: Raised when the email format is invalid (sign up or sign in).  
+  **Resolution**: Ask the user to enter a valid email address.
+
+- **auth/weak-password**: During sign up, if the password is less than 6 characters.  
+  **Resolution**: Require a stronger password and guide the user to use more characters.
+
+- **auth/user-not-found**: Sign in or password reset, when there is no account with the entered email.  
+  **Resolution**: Inform the user and suggest creating an account.
+
+- **Network Errors**: Failed requests due to connectivity issues.  
+  **Resolution**: Advise the user to check their internet connection and retry.
 
 ## Usage Examples
 
-```javascript
-// Accessing authentication state and actions
+```jsx
+// Wrapping your app with AuthProvider (context/AuthContext.js)
+import { AuthProvider } from './context/AuthContext';
+
+export default function App() {
+  return (
+    <AuthProvider>
+      {/* Your navigation and screens */}
+    </AuthProvider>
+  );
+}
+
+// Using signIn in a screen component (screens/SignInScreen.js)
 import { useAuth } from '../context/AuthContext';
 
-// Inside a React component
-const { currentUser, signIn, signUp, logOut, resetPassword, loading } = useAuth();
+function MySignIn() {
+  const { signIn } = useAuth();
+  const handleLogin = () => {
+    signIn('user@example.com', 'password123')
+      .then(user => { /* Navigate to main app */ })
+      .catch(err => { /* Show error message */ });
+  };
+  // ...
+}
 
-// Signing in a user
-signIn(email, password)
-  .then(() => {
-    // Navigate to the main app screen on success
-  })
-  .catch(error => {
-    // Handle sign-in errors (e.g., invalid credentials)
-  });
+// Using signUp and saving profile (screens/SignUpScreen.js)
+import { useAuth } from '../context/AuthContext';
+import { FB_DB } from '../firebaseconfig';
+import { doc, setDoc } from 'firebase/firestore';
 
-// Signing up a new user and saving additional data
-signUp(email, password)
-  .then(userCredential => {
-    // Save user profile in Firestore
-    const userDocRef = doc(FB_DB, 'users', userCredential.user.uid);
-    return setDoc(userDocRef, { FirstName: firstName, LastName: lastName });
-  })
-  .catch(error => {
-    // Handle sign-up errors (e.g., email in use, weak password)
-  });
-
-// Resetting a forgotten password
-resetPassword(email)
-  .then(() => {
-    // Notify user to check their email
-  })
-  .catch(error => {
-    // Handle reset errors (e.g., invalid email)
-  });
-
-// Logging out
-logOut()
-  .then(() => {
-    // User is logged out, redirect to login screen if necessary
-  });
+function MySignUp() {
+  const { signUp } = useAuth();
+  const handleSignUp = async () => {
+    try {
+      const userCredential = await signUp('email', 'password');
+      await setDoc(doc(FB_DB, 'users', userCredential.user.uid), {
+        FirstName: 'Jane',
+        LastName: 'Doe',
+      });
+      // Navigate to main app
+    } catch (error) {
+      // Handle errors (see "System Errors" above)
+    }
+  };
+  // ...
+}
 ```
 
 ## System Integration
 
 ```mermaid
 flowchart LR
-  firebaseAuth["Firebase Auth Service"] --> authContext["Authentication Module (AuthContext)"] --> screens["SignIn/SignUp Screens"]
-  firebaseDB["Firestore (Users Collection)"] --> authContext
-  authContext --> navigation["Navigation (React Navigation)"]
-  screens --> uiFeedback["UI Error/Success Feedback"]
-  screens --> consumers["Other App Screens/Features"]
+  firebaseAuth["Firebase Auth / Firestore"] --> authContext["Authentication Module (AuthContext)"] --> screens["SignInScreen / SignUpScreen / Other Screens"]
+  firebaseAuth --> passwordReset["[Password Reset, State Sync]"]
+  authContext --> navigation["[Navigation, Context Consumers]"] 
+  screens --> userFlow["[UI, User Experience]"]
 ```
 
-**Explanation:**
-- `Firebase Auth Service` integrates with the Authentication Module to perform sign-in, sign-up, logout, and password reset actions.
-- The Authentication Module (AuthContext) exposes authentication state and actions to all consuming components/screens (e.g., SignInScreen, SignUpScreen).
-- During sign-up, additional profile data is written to Firestore's Users collection via the module.
-- UI components (like SignInScreen, SignUpScreen) use the module to manage user flow and surface error/success feedback.
-- On auth state change, navigation is directed accordingly.
-- Other features/screens in the app can access current user/auth state via the module for protected routes and user-specific content.
+- **Firebase Auth/Firestore** are external dependencies providing backend authentication and profile persistence.
+- **Authentication Module (AuthContext)** acts as the bridge, exposing state and actions via React Context to UI components/screens.
+- **Screens** (e.g., `SignInScreen`, `SignUpScreen`) act as consumers, invoking context functions and responding to state.
+- **Navigation** integrates after authentication actions for routing.
+- **Password Reset, State Sync** are internal flows ensuring up-to-date and secure handling of user authentication status.

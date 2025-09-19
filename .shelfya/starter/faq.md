@@ -1,37 +1,39 @@
 # FAQ Module
 
 ## Overview
-The FAQ module provides centralized access to frequently asked questions within the starter application. It helps users and developers quickly find answers about using and integrating the Expo Firebase Boilerplate, reducing onboarding time and support requests.
+The FAQ Module provides a structured way to display frequently asked questions and their answers within the Expo Firebase Boilerplate. It is designed to help users and developers quickly find solutions to common issues, making onboarding and troubleshooting more efficient.
 
 ## Key Features
-- **Centralized FAQ Collection**: Aggregates essential questions and answers in one location for easy reference.
-- **Starter Guidance**: Clarifies configuration, basic usage, and integration steps.
-- **Support Reduction**: Minimizes the need for direct support by addressing common issues and scenarios upfront.
+- **Question-Answer Display**: Presents common questions and their respective answers in a readable format.
+- **Searchable Content**: (If enabled) Allows users to search through FAQs for specific keywords or topics.
+- **Easy Maintenance**: FAQs can be updated or extended without disrupting other system modules.
 
 ## System Errors
-- **Outdated Information**: Some FAQ entries may not reflect recent code changes.  
-  **Resolution**: Verify with the latest README and codebase updates.
-- **Missing Answers**: Not all user queries are covered.  
-  **Resolution**: Submit new questions for inclusion or check related documentation.
+- **FAQ Not Found**: Occurs when a requested FAQ item does not exist.  
+  Resolution: Double-check the FAQ identifier or update the FAQ data source.
+- **Content Load Failure**: Happens if the FAQ data cannot be loaded (e.g., network issues or file corruption).  
+  Resolution: Ensure network connectivity or verify the FAQ content/data file integrity.
 
 ## Usage Examples
+```javascript
+// Example: Import and use the FAQ module in your screen/component
 
-```markdown
-# Accessing the FAQ
+import FAQ from './.shelfya/starter/faq';
 
-To view answers to common questions, open `.shelfya/starter/faq.md`.
-
-# Example Entry
-**Q:** How do I configure Firebase?  
-**A:** Refer to the README setup section and follow the step-by-step guide.
+// Render the FAQ section in your app
+<FAQ
+  questions={[
+    { question: "How do I set up Firebase?", answer: "Follow the steps in the README." },
+    { question: "Where do I find configuration files?", answer: "Refer to the config folder in the project root." }
+  ]}
+/>
 ```
 
 ## System Integration
-
 ```mermaid
 flowchart LR
-  docs["README.md, Other Documentation"] --> faqModule["FAQ Module (.shelfya/starter/faq.md)"] --> endUser["End Users / Developers"]
-  docs --> updateProcess["[Documentation Updates]"]
-  faqModule --> supportProcess["[FAQ Reference & Support]"] 
-  endUser --> onboarding["[Faster Onboarding]"]
+  dependencies["README Content/Configuration"] --> thisModule["FAQ Module"] --> usedBy["User Interface/Screens"]
+  dependencies --> details["Project Documentation, Config Files"]
+  thisModule --> process["Display, Search, Update FAQ"]
+  usedBy --> consumers["End Users, Developers"]
 ```

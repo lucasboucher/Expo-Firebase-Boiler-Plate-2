@@ -1,46 +1,60 @@
 # API Overview
 
 ## Overview
-The API module provides a centralized interface for managing authentication, user sessions, and navigation flows within the Expo-Firebase boilerplate application. It connects user context, authentication state, and main navigation stacks to enable seamless transitions between authenticated and unauthenticated experiences. This module helps other services and components access user data, determine authentication status, and handle navigation logic.
+This module provides a feature-centric abstraction for integrating Firebase authentication and user profile management into a React Native Expo application. It establishes authentication workflows (sign up, sign in, sign out, password reset) and enables seamless access to Firestore-based user profiles. The system leverages React Contexts for global state management and Firebase client SDKs for cloud service integration.
 
 ## Key Features
-- **Authentication State Management**: Monitors, updates, and exposes the current user’s authentication status throughout the app.
-- **User Context Provisioning**: Supplies user-related data to app components, enabling personalized features and stateful UI.
-- **Navigation Flow Control**: Directs users to either authenticated (MainStack) or unauthenticated (AuthStack) flows depending on their session state.
-- **Loading/UI State Coordination**: Communicates loading states, such as awaiting authentication checks, ensuring appropriate visual feedback.
+- **Firebase Service Initialization**: Secure bootstrapping and configuration of Firebase App, Auth, Firestore, and Storage, streamlined for React Native via persistent storage.
+- **AuthContext**: Exposes high-level authentication APIs (`signUp`, `signIn`, `logOut`, `resetPassword`) and provides real-time authentication state to the application.
+- **UserContext**: Automatically loads and updates the authenticated user's Firestore profile document, making profile data globally available within the app.
 
 ## System Errors
-- **Authentication Unavailable**: Occurs when authentication providers fail to respond or initialize.  
-  *Resolution*: Ensure network connectivity and correct API credentials.
-
-- **User Context Error**: Triggered when user data cannot be loaded or is missing.  
-  *Resolution*: Check user provider integration and validate backend user data retrieval.
-
-- **Navigation Initialization Failure**: Results from issues in navigation container setup or stack configuration.  
-  *Resolution*: Verify navigation component imports and confirm correct stack structure.
+- **Authentication Failure**: Occurs when sign-in/sign-up fails (e.g., invalid credentials, network issues).  
+  _Resolution_: Check credentials, ensure device network connectivity, and review Firebase project configuration.
+- **User Profile Not Found**: Triggered when a Firestore user document does not exist for the signed-in user.  
+  _Resolution_: Ensure user profiles are written to Firestore as part of the onboarding flow.
+- **Persistence Issues**: Arises if AsyncStorage fails to operate or initialize with Firebase Auth.  
+  _Resolution_: Confirm `@react-native-async-storage/async-storage` is installed and functioning.
 
 ## Usage Examples
 
 ```javascript
-import { useAuth } from './context/AuthContext';
+// Wrap your app with AuthProvider and UserProvider in App.js
+import { AuthProvider } from './context/AuthContext';
+import { UserProvider } from './context/UserContext';
 
-function AppContent() {
-  const { currentUser } = useAuth();
-  // Use currentUser to display personalized information
-  return currentUser ? <MainApp /> : <LoginScreen />;
-}
-
-// Wrapping the app with providers
 export default function App() {
   return (
     <AuthProvider>
       <UserProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
+        {/* ...your app components */}
       </UserProvider>
     </AuthProvider>
   );
+}
+
+// Use authentication features in components
+import { useAuth } from './context/AuthContext';
+
+function LoginScreen() {
+  const { signIn, resetPassword, loading, currentUser } = useAuth();
+
+  const handleLogin = async () => {
+    try {
+      await signIn(email, password);
+    } catch (e) {
+      // handle error
+    }
+  };
+}
+
+// Access current user's profile anywhere in the app
+import { useUser } from './context/UserContext';
+
+function ProfileScreen() {
+  const { profile } = useUser();
+
+  return <Text>{profile.displayName}</Text>;
 }
 ```
 
@@ -48,8 +62,8 @@ export default function App() {
 
 ```mermaid
 flowchart LR
-  dependencies["Dependencies (Firebase, React Navigation, Context Providers)"] --> thisModule["API Module (Auth + User Context, Navigation)"] --> usedBy["Used By (App Components, Navigation Flows)"]
-  dependencies --> details["[Details: Initializes context, configures navigation stacks]"]
-  thisModule --> process["[Process: Handles auth state, provides user context, manages navigation]"] 
-  usedBy --> consumers["[Consumers: MainStack, AuthStack, UI components]"]
+  dependencies["Firebase Cloud Services (Auth, Firestore, Storage), AsyncStorage"] --> thisModule["API Module (AuthContext, UserContext)"] --> usedBy["App Components"]
+  dependencies --> details["[Firebase Configuration (.env), React Native AsyncStorage]"]
+  thisModule --> process["[Authentication Flows, Profile Sync]"] 
+  usedBy --> consumers["[Screens, Hooks, React Components]"]
 ```

@@ -1,79 +1,42 @@
 # Getting Started
 
 ## Overview
-This project is a boilerplate for building mobile apps using Expo, React Native, Firebase, and React Navigation. It provides a ready-to-use authentication flow and basic user management out of the box, serving as a foundation for building scalable and secure mobile applications.
+This starter module provides a foundation for developing React Native apps using Expo with integrated Firebase authentication and navigation. It establishes the main application structure, manages authentication state, and provides a ready environment for building scalable, feature-rich mobile apps.
 
 ## Key Features
-- **Expo-Based Workflow**: Leverages Expo for simplified development, deployment, and testing on iOS, Android, and web platforms.
-- **Firebase Authentication Integration**: Provides user authentication functionality with Firebase, managing login, logout, and session states.
-- **React Navigation Setup**: Implements a dual-stack navigation model, automatically routing users between authentication screens and main app features based on their sign-in state.
-- **Context-Based State Management**: Uses React Context (`AuthProvider`, `UserProvider`) to manage authentication and user data globally across the application.
-- **User Experience Defaults**: Displays loading state during authentication checks and shows appropriate screens based on sign-in status.
+- **Dual Stack Navigation**: Automatically switches between authentication flow and main app flow based on user login state, leveraging React Navigation's stack navigator.
+- **Firebase Authentication Integration**: Centralized authentication state management using context providers to track the current user and loading state.
+- **Global State Management**: Provides access to authenticated user data across the application via context providers, enabling seamless data sharing.
+- **Expo Compatibility**: Optimized for Expo, allowing rapid development and easy deployment on Android, iOS, and web platforms.
 
 ## System Errors
-It's important to document common errors and troubleshooting specify :
-- **Firebase Configuration Error**: If Firebase is not correctly configured via environment variables or Firebase console, authentication will fail.  
-  **Resolution**: Ensure your Firebase credentials are added to the project and the Firebase setup matches your app configuration.
-- **Navigation Error**: Missing or incorrect navigation stack configuration may result in blank screens or navigation failures.  
-  **Resolution**: Ensure all navigators (`MainStack`, `AuthStack`) and their screens are correctly registered and exported.
-- **Environment Variable Error**: Problems loading environment variables via `.env` can prevent Firebase and other integrations from working.  
-  **Resolution**: Ensure the `.env` file is present, environment variable names match, and Babel config for `react-native-dotenv` is properly set.
+- **Authentication Loading Delay**: If the authentication state takes too long to resolve, users may see a persistent loading spinner.
+  - **Resolution**: Ensure Firebase is correctly configured and that your network connection is stable. Review async loading logic and environment setup.
+- **Navigation Mismatch**: If navigation routes are not properly set in `MainStack` or `AuthStack`, users may experience navigation errors or missing screens.
+  - **Resolution**: Verify that both `MainStack` and `AuthStack` are correctly exported and contain the expected screens.
 
 ## Usage Examples
 
 ```javascript
-// Start the development server
-npm install
-npm run start
+// Entry point: App.js
 
-// App.js usage pattern
 import React from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { UserProvider } from './context/UserContext';
-import { NavigationContainer } from '@react-navigation/native';
-// ...rest of import/setup
+import App from './App'; // Main app structure provided by the starter
 
-export default function App() {
-  return (
-    <AuthProvider>
-      <UserProvider>
-        <NavigationContainer>
-          {/* App navigation logic */}
-        </NavigationContainer>
-      </UserProvider>
-    </AuthProvider>
-  );
-}
-```
+export default App;
 
-```bash
-# Start on Android emulator
-npm run android
-
-# Start on iOS simulator
-npm run ios
-
-# Start on the web
-npm run web
+// Typical usage scenario:
+// 1. Wrap your app in AuthProvider and UserProvider (for auth and user state).
+// 2. NavigationContainer manages navigation context.
+// 3. AppNavigator conditionally renders MainStack or AuthStack depending on Firebase authentication state.
 ```
 
 ## System Integration
 
 ```mermaid
 flowchart LR
-  firebase["Firebase Auth/Database"] --> AuthProvider["AuthProvider (Context)"] --> App["App Component"]
-  UserProvider["UserProvider (Context)"] --> App
-  App --> NavigationContainer["NavigationContainer"]
-  NavigationContainer --> MainStack["MainStack (Authenticated Navigation)"]
-  NavigationContainer --> AuthStack["AuthStack (Unauthenticated Navigation)"]
-  App --> ExpoRuntime["Expo Runtime"]
-  App --> ReactNative["React Native Engine"]
+  dependencies["Firebase Auth<br>React Navigation<br>Expo<br>Context Providers"] --> thisModule["App.js (Starter Module)"] --> usedBy["Application Screens"]
+  dependencies --> details["Firebase setup,<br> User Context,<br> Auth Context"]
+  thisModule --> process["Handles:<br>- Auth loading<br>- Stack switching<br>- Context setup"]
+  usedBy --> consumers["MainStack:<br>Main App Flows<br><br>AuthStack:<br>Login/Register"]
 ```
-*Dependencies:*  
-- Firebase services (authentication, database)  
-- Expo SDK & React Native libraries  
-- Environment variables for configuration
-
-*Used By:*  
-- Developers customizing authentication and navigation  
-- Any React Native/Expo app using this boilerplate for rapid project scaffolding
