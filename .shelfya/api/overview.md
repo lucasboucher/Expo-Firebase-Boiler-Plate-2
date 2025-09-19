@@ -1,85 +1,112 @@
-# Authentication and User Management Module
+# Expo Firebase Boilerplate API Overview
 
 ## Overview
-This module provides authentication and user profile management for the Expo-Firebase Boilerplate. It integrates Firebase Authentication and Firestore to enable user sign-in, sign-up, sign-out, password reset, and profile retrieval within a React Native application. The module uses React contexts (`AuthContext`, `UserContext`) to supply authentication state and user information throughout the app. UI components (SignInScreen, SignUpScreen) provide end-user interactions.
+
+This module provides a foundational authentication and user session system for React Native apps bootstrapped with Expo, using Firebase as the backend. It manages user sign-in, sign-up, and session persistence, offers user context to descendant components, and handles navigation between authentication and the main app flows.
+
+The goal is to seamlessly support user registration, login, profile retrieval, and navigation state, with clear separation between authentication routes and main application routes.
 
 ## Key Features
 
-- **Firebase Initialization**: Centralizes and exposes configured Firebase services (Auth, Firestore, Storage) for use across the application.
-- **User Authentication Context (`AuthContext`)**: Provides React context with public functions for:
-  - Sign up (with email/password)
-  - Sign in (with email/password)
-  - Password reset
-  - Log out
-  - Access to current authentication state and loading state
-- **User Profile Context (`UserContext`)**: Supplies a context to retrieve and update the current signed-in user's profile from Firestore, automatically syncing on authentication changes.
-- **Sign-In Flow (`SignInScreen`)**: Presents UI for user email/password login, with error handling for credential issues, and navigation on success.
-- **Sign-Up Flow (`SignUpScreen`)**: Presents UI for user registration, creates Firebase Auth user, then stores profile info in Firestore, with granular error handling and navigation integration.
+- **Authentication Context**: Provides a context-driven approach to manage authentication state, exposing current user information and common authentication methods (sign up, sign in, sign out, password reset).
+- **User Profile Context**: Automatically provides user profile data (such as first name, last name) from Firestore to the app via context, keeping it in sync with authentication state.
+- **Conditional Navigation Routing**: Dynamically routes users to the authentication flow (sign up, sign in) or the main application interface based on their authentication status.
+- **Error Feedback and Validation**: Validates user input and delivers actionable error messages for common authentication scenarios (e.g., wrong credentials, email in use, weak password).
+- **Persistent Session Management**: Integrates with Firebase Auth for real-time session persistence and auto-login, remembering users across app restarts.
 
 ## System Errors
 
-- **auth/invalid-credential**: Thrown during sign-in if provided email or password is incorrect.
-  - *Resolution*: User is notified to check credentials; error is shown under password input.
-- **auth/email-already-in-use**: Thrown during sign-up if the email is already registered.
-  - *Resolution*: User is notified; error message shown under email field.
-- **auth/invalid-email**: Triggered if email is in an incorrect format during sign-up.
-  - *Resolution*: User is prompted for a valid email address.
-- **auth/weak-password**: Sign-up fails if password does not meet minimum strength (typically 6 characters).
-  - *Resolution*: User must choose a stronger password; error message shown.
-- **Empty Field Validation**: UI prevents submission with empty fields, and highlights missing values with error messages before making Firebase calls.
-- **Firestore Write Errors**: Failures when storing user profile after sign-up.
-  - *Resolution*: General error message logged for diagnostics; no user feedback unless specifically implemented.
+- **auth/email-already-in-use**: Attempt to sign up with an email already registered.  
+  *Resolution*: Use a different email or attempt password reset if the email is yours.
+
+- **auth/invalid-email**: Provided email is not in a valid format.  
+  *Resolution*: Enter a correctly formatted email address.
+
+- **auth/weak-password**: Password does not meet Firebase's security criteria (minimum 6 characters).  
+  *Resolution*: Choose a stronger password with at least 6 characters.
+
+- **auth/invalid-credential**: Invalid login credentials provided during sign in.  
+  *Resolution*: Check the email and password are correct; if unsure, reset the password.
+
+- **User document not found**: No Firestore user profile exists for the authenticated UID.  
+  *Resolution*: Ensure sign up completes successfully and profile is created in Firestore.
+
+- **Network or Server Errors**: Any operation may fail due to network issues or Firebase unavailability.  
+  *Resolution*: Retry after confirming network connectivity.
 
 ## Usage Examples
 
 ```jsx
-// 1. Wrap your app with AuthProvider and UserProvider
-import { AuthProvider } from './context/AuthContext';
-import { UserProvider } from './context/UserContext';
-
+// In App.js, wrap your app in providers for Auth and User context:
 export default function App() {
   return (
     <AuthProvider>
       <UserProvider>
-        {/* ...rest of your app... */}
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
       </UserProvider>
     </AuthProvider>
   );
 }
 
-// 2. Use authentication functions in your screens
+// Inside a screen, access authentication and user profile:
 import { useAuth } from '../context/AuthContext';
-
-// Sign in a user
-const { signIn } = useAuth();
-signIn(email, password)
-  .then(user => /* navigate to main app */)
-  .catch(error => /* handle errors - e.g., invalid credentials */);
-
-// Sign up a user, then store profile info
-const { signUp } = useAuth();
-signUp(email, password)
-  .then((userCredential) => {
-    // Store extra profile data in Firestore (`users` collection, doc by uid)
-  });
-
-// 3. Access current user profile anywhere in the tree
 import { useUser } from '../context/UserContext';
-const { profile } = useUser();
-console.log(profile.FirstName, profile.LastName);
+
+function ProfileScreen() {
+  const { currentUser, logOut } = useAuth();
+  const { profile } = useUser();
+
+  return (
+    <View>
+      <Text>Email: {currentUser?.email}</Text>
+      <Text>Name: {profile.FirstName} {profile.LastName}</Text>
+      <Button title="Log Out" onPress={logOut} />
+    </View>
+  );
+}
+
+// To sign in or sign up in screens:
+const { signIn, signUp } = useAuth();
+
+// Sign In
+signIn(email, password)
+  .then(/* handle success */)
+  .catch(err => /* handle errors */);
+
+// Sign Up and create Firestore profile record
+signUp(email, password)
+  .then(userCredential => setDoc(doc(FB_DB, 'users', userCredential.user.uid), {
+    FirstName: firstName,
+    LastName: lastName
+  }))
+  .then(/* handle success */)
+  .catch(/* handle errors */);
 ```
 
 ## System Integration
 
 ```mermaid
 flowchart LR
-  dependencies["Dependencies (Firebase, AsyncStorage, React Navigation, Firestore)"] --> firebaseConfig["firebaseconfig.js (Initialize & export FB_AUTH, FB_DB, FB_STORE)"]
-  firebaseConfig --> authContext["AuthContext (AuthProvider, useAuth)"] --> signInScreen["SignInScreen"]
-  authContext --> signUpScreen["SignUpScreen"]
-  authContext --> userContext["UserContext (UserProvider, useUser)"]
-  userContext --> appTree["App & Other Components"]
-  signUpScreen --> firestoreUsers["Firestore 'users' collection"]
-  signInScreen --> navigation["App Navigation ('Main', etc)"]
-  signUpScreen --> navigation
-  appTree --> consumers["UI Components, Profile screens, etc."]
+  FirebaseAuth[("Firebase Auth Service")]
+  Firestore[("Firestore Database")]
+  Navigation[("React Navigation")]
+  
+  AppJS[App.js]
+  AuthProvider[AuthProvider<br/>(AuthContext.js)]
+  UserProvider[UserProvider<br/>(UserContext.js)]
+  AuthStack[AuthStack Navigator]
+  MainStack[MainStack Navigator]
+  Screens["Screens (SignIn, SignUp, Home, Browse, Profile, FirstScreen)"]
+  
+  FirebaseAuth <-->|User login/signup/logout| AuthProvider
+  Firestore <-->|Profile read/write| UserProvider
+  AppJS --> AuthProvider --> UserProvider --> Navigation
+  Navigation --> AuthStack
+  Navigation --> MainStack
+  AuthProvider -->|Auth state| Screens
+  UserProvider -->|Profile data| Screens
+  AuthStack -->|Unauthenticated| Screens
+  MainStack -->|Authenticated| Screens
 ```

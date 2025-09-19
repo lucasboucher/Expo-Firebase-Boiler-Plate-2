@@ -1,62 +1,72 @@
-# FAQ Module
+# Firebase Configuration Module
 
 ## Overview
-The FAQ module is designed to clarify common questions and usage patterns relating to authentication and user management within the Expo Firebase Boilerplate. It helps developers understand how authentication states, user profiles, and Firebase services work together in the application architecture.
+The Firebase Configuration Module centralizes the initialization and export of Firebase services (Authentication, Firestore, Storage) for use throughout the Expo React Native application. It ensures seamless integration of Firebase's core features, with environment-based configuration and support for persistent authentication via AsyncStorage.
 
 ## Key Features
-- **Authentication State Management**: Explains how user login status is tracked and used for navigation.
-- **User Profile Synchronization**: Details how user data is kept up-to-date using Firestore and context.
-- **Firebase Service Integration**: Clarifies how Firebase Auth, Firestore, and Storage are initialized and used in the app.
-- **Context Providers**: Demonstrates the role of AuthProvider and UserProvider in sharing authentication and user data across components.
+- **Centralized Service Initialization**: Initializes Firebase app and its main services—authentication, Firestore database, and storage—from a single configuration point.
+- **Environment-Driven Configuration**: Loads required credentials and connection information using environment variables for secure and flexible deployment.
+- **Persistent Authentication**: Implements React Native AsyncStorage as the persistence mechanism for user authentication state, enabling session continuity across app launches.
+- **Public Service Exports**: Provides direct access to the initialized Firebase services (app, auth, db, storage) for feature modules within the application.
 
 ## System Errors
-- **Invalid Credentials or Auth Failures**: Authentication functions may throw errors for incorrect email/password or network issues.  
-  **Resolution**: Catch exceptions and display corresponding error messages to users. Check Firebase project and API configuration.
-- **Missing User Document in Firestore**: During profile sync, if no user document exists in Firestore, the application will log "No such user!"  
-  **Resolution**: Ensure users have a corresponding document in the "users" collection upon registration, or handle missing profiles gracefully.
-- **Environment Variable Misconfiguration**: If Firebase config variables are missing or incorrectly set, initialization will fail.  
-  **Resolution**: Verify `.env` values for all required Firebase keys before running the app.
+- **Missing Environment Variables**: If required variables (e.g., APIKEY, PROJECTID) are missing, Firebase initialization will fail, causing runtime errors.
+  - **Resolution**: Ensure `.env` file contains all necessary credentials matching `.env.exemple`.
+- **Invalid Credentials**: Incorrect or invalid credentials may prevent connection to Firebase services.
+  - **Resolution**: Confirm values in the `.env` file correspond to your Firebase project settings.
+- **AsyncStorage Errors**: Issues with device storage can affect authentication persistence.
+  - **Resolution**: Check device storage permissions and integrity; review error logs for AsyncStorage operations.
 
 ## Usage Examples
-Practical code examples showing how to use the authentication and user contexts:
+Practical code examples showing how to use the module:
 
 ```javascript
-// How to sign in a user via AuthContext
-import { useAuth } from './context/AuthContext';
+import { FB_AUTH, FB_DB, FB_STORE } from './firebaseconfig';
 
-const { signIn, currentUser, logOut } = useAuth();
+// Example: Sign in a user with Firebase Auth
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
-async function handleLogin() {
-  try {
-    await signIn('user@example.com', 'password123');
-    // User is now signed in; you can access currentUser
-  } catch (error) {
-    // Handle error: error.message
-  }
-}
+signInWithEmailAndPassword(FB_AUTH, 'user@example.com', 'password123')
+  .then(userCredential => {
+    // Signed in
+    const user = userCredential.user;
+    // proceed with app logic
+  })
+  .catch(error => {
+    // Handle authentication errors
+  });
 
-// How to access user profile via UserContext
-import { useUser } from './context/UserContext';
+// Example: Add data to Firestore
+import { collection, addDoc } from 'firebase/firestore';
 
-const { profile } = useUser();
+addDoc(collection(FB_DB, 'users'), { name: 'John Doe', email: 'john@example.com' })
+  .then(docRef => {
+    // Document added with ID: docRef.id
+  })
+  .catch(error => {
+    // Handle Firestore error
+  });
 
-// 'profile' will be automatically synced from Firestore when user is logged in
-console.log(profile.displayName); // Access custom user properties
+// Example: Upload a file to Firebase Storage
+import { ref, uploadBytes } from 'firebase/storage';
 
-// How authentication state controls navigation
-// AppNavigator automatically switches stacks based on currentUser
+const storageRef = ref(FB_STORE, 'avatars/user123.jpg');
+uploadBytes(storageRef, fileBlob)
+  .then(snapshot => {
+    // File uploaded successfully
+  })
+  .catch(error => {
+    // Handle upload error
+  });
 ```
 
 ## System Integration
+
 ```mermaid
 flowchart LR
-  dependencies["Firebase Services (Auth, Firestore, Storage)"] --> thisModule["FAQ Module"] --> usedBy["Consumer Components"]
-  dependencies --> details["firebaseconfig.js: Initialization"]
-  thisModule --> process["AuthContext & UserContext: Provide state and profile"]
-  usedBy --> consumers["App.js, Navigation, Screens"]
+  dependencies["Dependencies (.env, firebase SDK, AsyncStorage)"] --> thisModule["Firebase Configuration Module"]
+  thisModule --> usedBy["Used By (App Modules)"]
+  dependencies --> details["[Provides: API keys, credentials, persistence]"]
+  thisModule --> process["[Initializes Firebase app & services, sets persistence]"] 
+  usedBy --> consumers["[Authentication workflows, Firestore DB access, Storage uploads]"]
 ```
-
-**Explanation:**  
-- The FAQ module helps clarify the integration points between Firebase (initialized in `firebaseconfig.js`), the context providers (`AuthContext`, `UserContext`), and the rest of the app.
-- `App.js` composes these providers and navigation stacks based on authentication state, making context values accessible throughout consumer components.
-- Firestore and Auth errors are handled centrally, with user profiles synchronized dynamically.
