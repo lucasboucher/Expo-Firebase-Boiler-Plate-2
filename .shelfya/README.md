@@ -1,69 +1,58 @@
-# App Navigation & Context Orchestration
+# App Module
 
 ## Overview
-This module is the central entry point and navigation controller for the Expo Firebase boilerplate app. It manages high-level application routing based on user authentication state, initializes core providers (authentication and user profile context), and integrates the navigation stack. Its primary purpose is to ensure users are routed to the correct navigation flow (authenticated or unauthenticated), while maintaining global access to user and authentication states throughout the app.
+The App module is the entry point of the Expo Firebase boilerplate application. It manages global context providers, navigation logic, and conditional routing based on user authentication status. Its primary role is to orchestrate authentication state, user data provisioning, and navigation structure, ensuring the app displays correct screens whether the user is logged in or not.
 
 ## Key Features
-
-- **Conditional Navigation**: Directs users either to the authentication screens (AuthStack) or the main application flow (MainStack) based on their authentication status.
-- **Authentication State Management**: Integrates an authentication context provider, supplying current user and loading state across the app.
-- **Global User Context**: Wraps the app with a user context provider, enabling access and management of user-specific data throughout all screens.
-- **Expo Navigation Integration**: Sets up NavigationContainer as the root for all app navigation, compatible with React Navigation's stack and tab navigators.
-- **Loading State Handling**: Displays a centered activity indicator when authentication state is still being determined, improving user experience during app initialization.
+- **Authentication State Management**: Dynamically switches between authentication and main application flows based on user's authentication status.
+- **User Data Provisioning**: Wraps the app in a global user context provider for centralized user data access.
+- **Navigation Structure**: Integrates React Navigation to enable stack-based screen transitions and support deep linking.
+- **Loading Indicator**: Displays a loading spinner during authentication status checks, improving user experience during initialization.
 
 ## System Errors
-
-- **Authentication Context Not Available**: Occurs if the AuthProvider is not correctly initialized or its context isn't accessible.  
-  _Resolution_: Always ensure `<AuthProvider>` wraps the application root before accessing authentication hooks or context.
-- **Navigation Rendering Issues**: May arise if NavigationContainer is missing or if the stack navigators are not registered properly.  
-  _Resolution_: Confirm correct nesting of `NavigationContainer` and ensure all stack components (AuthStack, MainStack) are properly exported.
-- **Loading Spinner Not Disappearing**: If the authentication state never resolves (e.g., due to Firebase connection issue), app remains stuck in loading.  
-  _Resolution_: Check Firebase setup and connectivity; ensure the auth context resolves both success and failure states.
+- **Context Initialization Error**: If authentication or user context providers fail to initialize, navigation and state-dependent screens may not render.
+  - **Resolution**: Ensure the context providers are correctly implemented and wrapped around the NavigationContainer.
+- **Navigation Error**: Navigation stack misconfiguration may block users from reaching the correct screen based on authentication.
+  - **Resolution**: Confirm `MainStack` and `AuthStack` are correctly defined and exported, and the conditional rendering logic is properly set up.
+- **Firebase Connection Error**: Backend errors may prevent proper authentication or user data fetching.
+  - **Resolution**: Verify Firebase initialization and credentials, and handle errors in AuthContext or UserContext.
 
 ## Usage Examples
+Practical example showing how the module flows with context and navigation:
 
 ```javascript
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
-import AppNavigator from './AppNavigator'; // hypothetical extraction for modular use
+import { NavigationContainer } from '@react-navigation/native';
+import MainStack from './component/Navigation/MainStack';
+import AuthStack from './component/Navigation/AuthStack';
 
 export default function App() {
   return (
     <AuthProvider>
       <UserProvider>
         <NavigationContainer>
+          {/* AppNavigator will conditionally show MainStack or AuthStack based on authentication */}
           <AppNavigator />
         </NavigationContainer>
       </UserProvider>
     </AuthProvider>
   );
 }
-
-// AppNavigator routes based on auth state:
-// - <MainStack/> if user is authenticated
-// - <AuthStack/> if user is unauthenticated
 ```
 
 ## System Integration
 
 ```mermaid
 flowchart LR
-  firebaseAuth["Firebase Auth"]
-  navigation["React Navigation"]
-  userDb["User Data Source (Firestore, etc)"]
+  dependencies["Dependencies"]
+  thisModule["App Module"]
+  usedBy["Used By"]
 
-  firebaseAuth --> authContext["AuthContext Provider"]
-  authContext --> thisModule["App Navigation & Context Module"]
-  userDb --> userContext["UserContext Provider"]
-  userContext --> thisModule
-
-  navigation --> thisModule
-
-  thisModule --> mainStack["MainStack (App Screens)"]
-  thisModule --> authStack["AuthStack (Login/Signup Screens)"]
-
-  mainStack --> appUI["Authenticated User UI"]
-  authStack --> loginUI["Login/Registration UI"]
+  dependencies --> thisModule
+  dependencies --> details["Expo, Firebase, React Navigation, Context Providers"]
+  thisModule --> process["Conditional Routing (Auth/Main)"]
+  thisModule --> usedBy
+  usedBy --> consumers["Screens, User Context, Auth Context"]
 ```

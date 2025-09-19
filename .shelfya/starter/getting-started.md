@@ -1,60 +1,79 @@
-# Getting Started Module
+# Getting Started
 
 ## Overview
-The Getting Started module provides the foundational setup steps and configuration guidance required to launch and develop applications using the Expo Firebase Boilerplate. Its purpose is to help developers quickly initialize their project environment, understand project structure, and integrate essential dependencies, enabling a streamlined start for cross-platform React Native projects with Firebase backend integration.
+This project is a boilerplate for building mobile apps using Expo, React Native, Firebase, and React Navigation. It provides a ready-to-use authentication flow and basic user management out of the box, serving as a foundation for building scalable and secure mobile applications.
 
 ## Key Features
-- **Project Initialization Guidance**: Outlines how to install dependencies, configure environment files, and start the application on various platforms (Android, iOS, web).
-- **Cross-Platform Expo Support**: Delivers a consistent experience for running and debugging the app across Android, iOS, and web using Expo's unified tooling.
-- **Firebase Integration Setup**: Guides developers through connecting the application to Firebase using the appropriate SDK and configuration.
-- **Navigation Setup Assistance**: Introduces routing structure provided by React Navigation for multi-screen workflows.
-- **Environment Variable Loading**: Ensures sensitive settings (API keys, endpoints) are managed securely using dotenv and react-native-dotenv.
+- **Expo-Based Workflow**: Leverages Expo for simplified development, deployment, and testing on iOS, Android, and web platforms.
+- **Firebase Authentication Integration**: Provides user authentication functionality with Firebase, managing login, logout, and session states.
+- **React Navigation Setup**: Implements a dual-stack navigation model, automatically routing users between authentication screens and main app features based on their sign-in state.
+- **Context-Based State Management**: Uses React Context (`AuthProvider`, `UserProvider`) to manage authentication and user data globally across the application.
+- **User Experience Defaults**: Displays loading state during authentication checks and shows appropriate screens based on sign-in status.
 
 ## System Errors
-- **Dependency Version Mismatch**: If package versions in `package.json` are not compatible with each other or with Expo, installation or runtime errors may occur.
-  - *Resolution*: Use versions specified in the boilerplate; run `npm install` or `yarn` after cloning, and do not upgrade dependencies arbitrarily.
-- **Missing Environment Variables**: If required variables are absent from `.env`, the app may fail to start or connect to services.
-  - *Resolution*: Ensure `.env` is created based on provided samples and necessary values are set.
-- **Metro Bundler SVG Error**: If SVG support is misconfigured, images may fail to load.
-  - *Resolution*: The `metro.config.js` must use `react-native-svg-transformer` and include correct file extensions (per sample).
-- **Expo Not Installed Globally**: If you receive the error “expo: command not found,” you cannot run the app locally.
-  - *Resolution*: Install Expo CLI globally with `npm install -g expo-cli`.
+It's important to document common errors and troubleshooting specify :
+- **Firebase Configuration Error**: If Firebase is not correctly configured via environment variables or Firebase console, authentication will fail.  
+  **Resolution**: Ensure your Firebase credentials are added to the project and the Firebase setup matches your app configuration.
+- **Navigation Error**: Missing or incorrect navigation stack configuration may result in blank screens or navigation failures.  
+  **Resolution**: Ensure all navigators (`MainStack`, `AuthStack`) and their screens are correctly registered and exported.
+- **Environment Variable Error**: Problems loading environment variables via `.env` can prevent Firebase and other integrations from working.  
+  **Resolution**: Ensure the `.env` file is present, environment variable names match, and Babel config for `react-native-dotenv` is properly set.
 
 ## Usage Examples
-Practical steps to get started:
+
+```javascript
+// Start the development server
+npm install
+npm run start
+
+// App.js usage pattern
+import React from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { UserProvider } from './context/UserContext';
+import { NavigationContainer } from '@react-navigation/native';
+// ...rest of import/setup
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <UserProvider>
+        <NavigationContainer>
+          {/* App navigation logic */}
+        </NavigationContainer>
+      </UserProvider>
+    </AuthProvider>
+  );
+}
+```
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/lucasboucher/Expo-Firebase-Boiler-Plate-2.git
-cd Expo-Firebase-Boiler-Plate-2
+# Start on Android emulator
+npm run android
 
-# 2. Install dependencies
-npm install    # or: yarn
+# Start on iOS simulator
+npm run ios
 
-# 3. Create a .env file for environment variables (API keys, etc.)
-cp .env.example .env
-# Edit .env and add your Firebase and other keys
-
-# 4. Start the Metro bundler and launch app on your target platform:
-npm run android   # Start on Android emulator/device
-npm run ios       # Start on iOS simulator/device
-npm run web       # Start in web browser
-
-# 5. (Optional) Run Expo developer tools:
-npm start
+# Start on the web
+npm run web
 ```
 
 ## System Integration
+
 ```mermaid
 flowchart LR
-  dependencies["Dependencies"]
-  thisModule["Getting Started Module"]
-  usedBy["Developers / New Projects"]
-
-  dependencies --> thisModule
-  dependencies --> details["Expo, Firebase, React Native, React Navigation,\nreact-native-dotenv, asset transformers"]
-  thisModule --> process["Setup & Initialization"]
-  usedBy --> consumers["Project Initialization, App Bootstrap"]
-
-  thisModule --> usedBy
+  firebase["Firebase Auth/Database"] --> AuthProvider["AuthProvider (Context)"] --> App["App Component"]
+  UserProvider["UserProvider (Context)"] --> App
+  App --> NavigationContainer["NavigationContainer"]
+  NavigationContainer --> MainStack["MainStack (Authenticated Navigation)"]
+  NavigationContainer --> AuthStack["AuthStack (Unauthenticated Navigation)"]
+  App --> ExpoRuntime["Expo Runtime"]
+  App --> ReactNative["React Native Engine"]
 ```
+*Dependencies:*  
+- Firebase services (authentication, database)  
+- Expo SDK & React Native libraries  
+- Environment variables for configuration
+
+*Used By:*  
+- Developers customizing authentication and navigation  
+- Any React Native/Expo app using this boilerplate for rapid project scaffolding

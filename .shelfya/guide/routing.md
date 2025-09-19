@@ -1,51 +1,71 @@
-# Routing
+# Routing Module
 
 ## Overview
-The routing module manages the navigation flow of the application, controlling how users move between authentication-related screens and the main content areas. It ensures that users are directed to the appropriate set of screens based on their authentication status and provides a tab-based interface for primary app sections.
+The **Routing module** coordinates user navigation throughout the Expo Firebase Boilerplate app. It dynamically determines which navigation stack to display—authentication or main application—based on the user's authentication state. This module ensures users interact with the appropriate screens, maintaining both security and a fluid user experience.
 
 ## Key Features
-
-- **Authentication Stack Navigation**: Separates all authentication-related screens (e.g., sign in, sign up, welcome) into an isolated navigation stack to streamline user onboarding and login workflows.
-- **Main Stack Navigation**: Organizes main app screens (Home, Browse, Profile) into a bottom tab bar, allowing seamless transitions between primary content areas.
-- **Custom Tab Bar Icons**: Displays distinct icons for each main section, improving user recognition and app usability.
-- **Initial Route Handling**: Defines default entry screens for both authentication and main app navigation, ensuring users start at the correct point based on context.
+- **Authentication Stack Navigation**: Presents onboarding, sign-in, and sign-up screens when the user is not authenticated.
+- **Main Application Navigation**: Displays core app screens (Home, Browse, Profile) via a customizable tab navigator once the user is authenticated.
+- **Dynamic Stack Switching**: Automatically selects which stack (Auth or Main) to render based on real-time authentication state.
+- **Navigation Container Integration**: Utilizes React Navigation's container and customizable stack/tab navigators to provide a cohesive navigation environment.
 
 ## System Errors
-- **Route Name Mismatch**: If initial route names (such as "FirstPage" vs "FirstScreen") don't align with actual screen names, navigation may fail to render.  
-  **Resolution**: Ensure the `initialRouteName` property matches one of the defined screen names in the stack.
-- **Component Import Errors**: If a screen component is missing or incorrectly imported, navigation will not work as expected.  
-  **Resolution**: Confirm that all referenced components (e.g., `FirstScreen`, `SignUpScreen`, `ProfileScreen`) exist and are correctly exported.
-- **Icon Asset Loading Issues**: If SVG icon assets are missing or improperly referenced, tab icons might not display.  
-  **Resolution**: Verify that icon files exist at the specified paths and are valid SVGs.
+- **Navigator Rendering Error**: Occurs when neither AuthStack nor MainStack is rendered due to an invalid authentication state.
+  - **Resolution**: Ensure `useAuth()` correctly provides `currentUser` and `loading`. User should not remain in a loading state indefinitely.
+- **Screen Not Found**: If an expected screen is missing from either stack navigator configuration.
+  - **Resolution**: Confirm all referenced screens (e.g., "FirstScreen", "SignInScreen", "HomeScreen") are correctly imported and registered in their respective stack/tab navigators.
 
 ## Usage Examples
+Practical code snippet illustrating dynamic routing and stack usage:
 
 ```javascript
-// Import the routing stacks into your top-level navigation controller
-
-import AuthStack from './component/Navigation/AuthStack';
-import MainStack from './component/Navigation/MainStack';
-
-// Example integration within a navigation container
-
 import { NavigationContainer } from '@react-navigation/native';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import MainStack from './component/Navigation/MainStack';
+import AuthStack from './component/Navigation/AuthStack';
 
-export default function AppRouter({ isAuthenticated }) {
+function AppNavigator() {
+  const { currentUser, loading } = useAuth();
+
+  if (loading) {
+    return <ActivityIndicator />;
+  }
+
   return (
-    <NavigationContainer>
-      {isAuthenticated ? <MainStack /> : <AuthStack />}
-    </NavigationContainer>
+    <Stack.Navigator>
+      {currentUser ? (
+        <Stack.Screen name="Main" component={MainStack} />
+      ) : (
+        <Stack.Screen name="Auth" component={AuthStack} />
+      )}
+    </Stack.Navigator>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 ```
 
 ## System Integration
+Below is a diagram showing how the Routing module orchestrates navigation based on user's state and connects different navigation stacks:
 
 ```mermaid
 flowchart LR
-  dependencies["@react-navigation/native, @react-navigation/native-stack, @react-navigation/bottom-tabs, React, SVG Icons"] --> thisModule["Routing Module"]
-  thisModule --> process["AuthStack/ MainStack navigation flow"] 
-  thisModule --> usedBy["App Entry (NavigationContainer)"]
-  usedBy --> consumers["Screen Components (HomeScreen, BrowseScreen, ProfileScreen, SignInScreen, etc.)"]
-  dependencies --> details["Imports/ Assets (Screens, Icons, etc.)"]
+  contextProviders["Auth/User Context Providers"] --> routingModule["Routing Module (AppNavigator)"] --> navigators["Stack Navigator"]
+  routingModule --> authStack["AuthStack (First, SignUp, SignIn)"]
+  routingModule --> mainStack["MainStack (Home, Browse, Profile)"]
+  navigators --> screens["Screens (Home, Browse, Profile, First, etc.)"]
+  screens --> users["Users"]
 ```
+
+**Explanation:**
+- Context providers supply authentication and user state to Routing Module.
+- The Routing Module (AppNavigator) selects which navigator (auth/main) to render.
+- Navigators organize and present the relevant screens to users, guaranteeing screen transitions are appropriate for the user's session state.

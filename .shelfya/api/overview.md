@@ -1,43 +1,36 @@
-# Expo Firebase Boilerplate API Overview
+# API Overview
 
 ## Overview
-
-This module provides a foundational authentication and user session system for React Native apps bootstrapped with Expo, using Firebase as the backend. It manages user sign-in, sign-up, and session persistence, offers user context to descendant components, and handles navigation between authentication and the main app flows.
-
-The goal is to seamlessly support user registration, login, profile retrieval, and navigation state, with clear separation between authentication routes and main application routes.
+The API module provides a centralized interface for managing authentication, user sessions, and navigation flows within the Expo-Firebase boilerplate application. It connects user context, authentication state, and main navigation stacks to enable seamless transitions between authenticated and unauthenticated experiences. This module helps other services and components access user data, determine authentication status, and handle navigation logic.
 
 ## Key Features
-
-- **Authentication Context**: Provides a context-driven approach to manage authentication state, exposing current user information and common authentication methods (sign up, sign in, sign out, password reset).
-- **User Profile Context**: Automatically provides user profile data (such as first name, last name) from Firestore to the app via context, keeping it in sync with authentication state.
-- **Conditional Navigation Routing**: Dynamically routes users to the authentication flow (sign up, sign in) or the main application interface based on their authentication status.
-- **Error Feedback and Validation**: Validates user input and delivers actionable error messages for common authentication scenarios (e.g., wrong credentials, email in use, weak password).
-- **Persistent Session Management**: Integrates with Firebase Auth for real-time session persistence and auto-login, remembering users across app restarts.
+- **Authentication State Management**: Monitors, updates, and exposes the current user’s authentication status throughout the app.
+- **User Context Provisioning**: Supplies user-related data to app components, enabling personalized features and stateful UI.
+- **Navigation Flow Control**: Directs users to either authenticated (MainStack) or unauthenticated (AuthStack) flows depending on their session state.
+- **Loading/UI State Coordination**: Communicates loading states, such as awaiting authentication checks, ensuring appropriate visual feedback.
 
 ## System Errors
+- **Authentication Unavailable**: Occurs when authentication providers fail to respond or initialize.  
+  *Resolution*: Ensure network connectivity and correct API credentials.
 
-- **auth/email-already-in-use**: Attempt to sign up with an email already registered.  
-  *Resolution*: Use a different email or attempt password reset if the email is yours.
+- **User Context Error**: Triggered when user data cannot be loaded or is missing.  
+  *Resolution*: Check user provider integration and validate backend user data retrieval.
 
-- **auth/invalid-email**: Provided email is not in a valid format.  
-  *Resolution*: Enter a correctly formatted email address.
-
-- **auth/weak-password**: Password does not meet Firebase's security criteria (minimum 6 characters).  
-  *Resolution*: Choose a stronger password with at least 6 characters.
-
-- **auth/invalid-credential**: Invalid login credentials provided during sign in.  
-  *Resolution*: Check the email and password are correct; if unsure, reset the password.
-
-- **User document not found**: No Firestore user profile exists for the authenticated UID.  
-  *Resolution*: Ensure sign up completes successfully and profile is created in Firestore.
-
-- **Network or Server Errors**: Any operation may fail due to network issues or Firebase unavailability.  
-  *Resolution*: Retry after confirming network connectivity.
+- **Navigation Initialization Failure**: Results from issues in navigation container setup or stack configuration.  
+  *Resolution*: Verify navigation component imports and confirm correct stack structure.
 
 ## Usage Examples
 
-```jsx
-// In App.js, wrap your app in providers for Auth and User context:
+```javascript
+import { useAuth } from './context/AuthContext';
+
+function AppContent() {
+  const { currentUser } = useAuth();
+  // Use currentUser to display personalized information
+  return currentUser ? <MainApp /> : <LoginScreen />;
+}
+
+// Wrapping the app with providers
 export default function App() {
   return (
     <AuthProvider>
@@ -49,64 +42,14 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-// Inside a screen, access authentication and user profile:
-import { useAuth } from '../context/AuthContext';
-import { useUser } from '../context/UserContext';
-
-function ProfileScreen() {
-  const { currentUser, logOut } = useAuth();
-  const { profile } = useUser();
-
-  return (
-    <View>
-      <Text>Email: {currentUser?.email}</Text>
-      <Text>Name: {profile.FirstName} {profile.LastName}</Text>
-      <Button title="Log Out" onPress={logOut} />
-    </View>
-  );
-}
-
-// To sign in or sign up in screens:
-const { signIn, signUp } = useAuth();
-
-// Sign In
-signIn(email, password)
-  .then(/* handle success */)
-  .catch(err => /* handle errors */);
-
-// Sign Up and create Firestore profile record
-signUp(email, password)
-  .then(userCredential => setDoc(doc(FB_DB, 'users', userCredential.user.uid), {
-    FirstName: firstName,
-    LastName: lastName
-  }))
-  .then(/* handle success */)
-  .catch(/* handle errors */);
 ```
 
 ## System Integration
 
 ```mermaid
 flowchart LR
-  FirebaseAuth[("Firebase Auth Service")]
-  Firestore[("Firestore Database")]
-  Navigation[("React Navigation")]
-  
-  AppJS[App.js]
-  AuthProvider[AuthProvider<br/>(AuthContext.js)]
-  UserProvider[UserProvider<br/>(UserContext.js)]
-  AuthStack[AuthStack Navigator]
-  MainStack[MainStack Navigator]
-  Screens["Screens (SignIn, SignUp, Home, Browse, Profile, FirstScreen)"]
-  
-  FirebaseAuth <-->|User login/signup/logout| AuthProvider
-  Firestore <-->|Profile read/write| UserProvider
-  AppJS --> AuthProvider --> UserProvider --> Navigation
-  Navigation --> AuthStack
-  Navigation --> MainStack
-  AuthProvider -->|Auth state| Screens
-  UserProvider -->|Profile data| Screens
-  AuthStack -->|Unauthenticated| Screens
-  MainStack -->|Authenticated| Screens
+  dependencies["Dependencies (Firebase, React Navigation, Context Providers)"] --> thisModule["API Module (Auth + User Context, Navigation)"] --> usedBy["Used By (App Components, Navigation Flows)"]
+  dependencies --> details["[Details: Initializes context, configures navigation stacks]"]
+  thisModule --> process["[Process: Handles auth state, provides user context, manages navigation]"] 
+  usedBy --> consumers["[Consumers: MainStack, AuthStack, UI components]"]
 ```
